@@ -63,6 +63,13 @@ android {
     shaders = false
   }
 
+  // Leave out the dependency metadata block, which is encrypted with a Google key.
+  // F-Droid flags it, and it isn't needed outside Google Play.
+  dependenciesInfo {
+    includeInApk = false
+    includeInBundle = false
+  }
+
   packaging {
     resources {
       excludes += "/META-INF/{AL2.0,LGPL2.1}"
