@@ -1,4 +1,5 @@
 import java.util.Properties
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
   alias(libs.plugins.android.application)
@@ -78,7 +79,10 @@ android {
 }
 
 kotlin {
-  jvmToolchain(17)
+  // Target Java 17 bytecode with whatever JDK runs Gradle, so the build never downloads a JDK.
+  compilerOptions {
+    jvmTarget.set(JvmTarget.JVM_17)
+  }
 }
 
 dependencies {
