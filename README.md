@@ -4,6 +4,18 @@ pdfman is a small Android app that turns photos into PDF pages using grid layout
 
 <img src="fastlane/metadata/android/en-US/images/icon.png" width="96" alt="pdfman icon">
 
+## Screenshots
+
+<p>
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.png" width="200" alt="Home screen">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.png" width="200" alt="Editor with page preview">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.png" width="200" alt="Grid layout options">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.png" width="200" alt="Placement and auto rotate settings">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5.png" width="200" alt="Paper size picker">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6.png" width="200" alt="Saved PDFs on the home screen">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/7.png" width="200" alt="About screen">
+</p>
+
 ## Features
 
 - Any grid from 1x1 to 6x6, with fit or crop-to-fill placement, auto rotate and optional cell borders
@@ -25,6 +37,8 @@ Android 9 (API 28) or newer.
 You need JDK 17 and the Android SDK. Point `local.properties` at your SDK (Android Studio does this for you) or set `ANDROID_HOME`.
 
 ```bash
+git clone https://github.com/nikhil-anilkumar/pdfman.git
+cd pdfman
 ./gradlew assembleDebug        # debug APK, package com.pdfman.app.debug
 ./gradlew testDebugUnitTest    # unit tests
 ./gradlew assembleRelease      # release APK
@@ -60,7 +74,7 @@ The text and graphics shown on F-Droid live in `fastlane/metadata/android/`. Scr
 
 ## Contributing
 
-Bug reports and pull requests are welcome. If you're planning something big, open an issue first so we can talk it through.
+Bug reports and pull requests are welcome on [GitHub](https://github.com/nikhil-anilkumar/pdfman). If you're planning something big, [open an issue](https://github.com/nikhil-anilkumar/pdfman/issues) first so we can talk it through.
 
 ## License
 
