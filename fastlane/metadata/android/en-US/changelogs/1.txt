@@ -1,0 +1,6 @@
+First release.
+
+* Grid layouts from 1x1 to 6x6 with fit or crop placement
+* 32 paper sizes in portrait or landscape
+* Margins, spacing, borders and quality settings with a live preview
+* Saved PDFs can be reopened and edited

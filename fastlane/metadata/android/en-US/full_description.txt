@@ -1,0 +1,19 @@
+pdfman puts your photos onto PDF pages in a tidy grid. Pick a few pictures, choose how many go on each page, and save. That's it.
+
+It's handy for things like printing ID card copies, making a contact sheet of photos, putting receipts together for an expense claim, or fitting a stack of scanned notes onto fewer pages.
+
+<b>What it can do</b>
+<ul>
+<li>Any grid from 1x1 up to 6x6</li>
+<li>Fit the whole photo in each cell, or crop it to fill the cell</li>
+<li>Rotate photos automatically so they use the space better</li>
+<li>Optional borders around each cell</li>
+<li>32 paper sizes including ISO A and B, US Letter and Legal, JIS and common photo sizes, in portrait or landscape</li>
+<li>Adjustable margins and spacing, and three quality levels to balance file size against sharpness</li>
+<li>A live preview of the page that stays in view while you change settings</li>
+<li>Share photos straight from your gallery into pdfman</li>
+<li>Saved PDFs show up on the home screen, so you can open, edit and save them again later</li>
+</ul>
+
+<b>Privacy</b>
+pdfman works completely offline. It doesn't ask for internet access, has no ads and no tracking. It uses the system photo picker, so it can only see the photos you choose.

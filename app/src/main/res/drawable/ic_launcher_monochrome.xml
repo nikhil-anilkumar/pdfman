@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Single-color version for Android 13+ themed icons: page outline plus the grid tiles. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.5"
+        android:pathData="M37,29.25h34a1.75,1.75 0,0 1,1.75 1.75v46a1.75,1.75 0,0 1,-1.75 1.75h-34a1.75,1.75 0,0 1,-1.75 -1.75v-46a1.75,1.75 0,0 1,1.75 -1.75z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M39.5,33.5h12.5v18.5h-12.5zM56,33.5h12.5v18.5h-12.5zM39.5,56h12.5v18.5h-12.5zM56,56h12.5v18.5h-12.5z" />
+</vector>

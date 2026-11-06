@@ -1,0 +1,25 @@
+# Gradle and Kotlin
+.gradle/
+.kotlin/
+build/
+
+# Android Studio / IntelliJ
+*.iml
+.idea/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Machine specific
+local.properties
+.DS_Store
+
+# Build outputs
+*.apk
+*.aab
+
+# Release signing. Keep these private and back them up somewhere else.
+keystore.properties
+keystore/
+*.jks
+*.keystore
