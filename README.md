@@ -12,9 +12,7 @@ pdfman is a small Android app that turns photos into PDF pages using grid layout
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.png" width="200" alt="Grid layout options">
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.png" width="200" alt="Placement and auto rotate settings">
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5.png" width="200" alt="Paper size picker">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6.png" width="200" alt="Saved PDFs on the home screen">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/7.png" width="200" alt="About screen">
-</p>
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6.png" width="200" alt="Saved PDFs on the home screen"></p>
 
 ## Features
 
