@@ -69,6 +69,7 @@ fun MainScreen(vm: MainViewModel) {
         onAddImages = pickImages,
         onSave = { if (!vm.saveExisting()) saver.launch(vm.suggestedFileName()) },
       )
+      Screen.PAGE -> PageScreen(vm, state)
       Screen.ABOUT -> AboutScreen(onBack = vm::goHome)
     }
   }

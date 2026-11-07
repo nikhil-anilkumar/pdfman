@@ -78,4 +78,47 @@ class GridMathTest {
     assertEquals(842f, s.pageWidth, 0.5f)
     assertEquals(595f, s.pageHeight, 0.5f)
   }
+
+  @Test fun cropPanMovesTheWindowAcrossTheSlack() {
+    // 400x200 image in a square cell: a 200x200 window that can slide 200px sideways.
+    assertEquals(0f, GridMath.cropSource(400f, 200f, 100f, 100f, panX = 0f).left, eps)
+    assertEquals(200f, GridMath.cropSource(400f, 200f, 100f, 100f, panX = 1f).left, eps)
+    assertEquals(50f, GridMath.cropSource(400f, 200f, 100f, 100f, panX = 0.25f).left, eps)
+    // Out-of-range pans are clamped, and the axis with no slack ignores pan.
+    assertEquals(200f, GridMath.cropSource(400f, 200f, 100f, 100f, panX = 3f).left, eps)
+    assertEquals(0f, GridMath.cropSource(400f, 200f, 100f, 100f, panY = 1f).top, eps)
+  }
+
+  @Test fun draggingRightRevealsTheLeftOfTheImage() {
+    val cell = Box(0f, 0f, 100f, 100f)
+    // 2 image px per point and 200px of slack: dragging 25pt right moves the window 50px left.
+    val (x, y) = GridMath.panAfterDrag(400f, 200f, cell, rotated = false, panX = 0.5f, panY = 0.5f, dx = 25f, dy = 40f)
+    assertEquals(0.25f, x, eps)
+    assertEquals(0.5f, y, eps) // nothing cropped vertically
+    val (clamped, _) = GridMath.panAfterDrag(400f, 200f, cell, rotated = false, panX = 0.1f, panY = 0.5f, dx = 500f, dy = 0f)
+    assertEquals(0f, clamped, eps)
+  }
+
+  @Test fun dragOnARotatedImageFollowsTheFinger() {
+    // Turned 90 degrees clockwise, the image's x axis points down the page.
+    val cell = Box(0f, 0f, 100f, 100f)
+    val (down, _) = GridMath.panAfterDrag(400f, 200f, cell, rotated = true, panX = 0.5f, panY = 0.5f, dx = 0f, dy = 25f)
+    assertEquals(0.25f, down, eps)
+    val (sideways, _) = GridMath.panAfterDrag(400f, 200f, cell, rotated = true, panX = 0.5f, panY = 0.5f, dx = 25f, dy = 0f)
+    assertEquals(0.5f, sideways, eps)
+  }
+
+  @Test fun cellAtFindsTheTappedCell() {
+    val cells = GridMath.cells(200f, 200f, rows = 2, cols = 2, margin = 0f, gap = 0f)
+    assertEquals(0, GridMath.cellAt(cells, 10f, 10f))
+    assertEquals(3, GridMath.cellAt(cells, 150f, 150f))
+    assertEquals(-1, GridMath.cellAt(cells, 250f, 10f))
+  }
+
+  @Test fun imageAdjustFallsBackToTheLayoutMode() {
+    assertEquals(ScaleMode.CROP, ImageAdjust().modeOr(ScaleMode.CROP))
+    assertEquals(ScaleMode.FIT, ImageAdjust(scaleMode = ScaleMode.FIT).modeOr(ScaleMode.CROP))
+    assertTrue(ImageAdjust().isCentered)
+    assertFalse(ImageAdjust(panX = 0f).isCentered)
+  }
 }

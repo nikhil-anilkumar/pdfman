@@ -5,6 +5,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -171,7 +172,7 @@ internal fun EditorScreen(
       Column(Modifier.padding(padding).fillMaxSize()) {
         // The preview stays pinned; settings scroll underneath it.
         Surface(color = MaterialTheme.colorScheme.surfaceContainer, shadowElevation = 2.dp) {
-          Column { PreviewStrip(previews, state.pageCount, state.settings) }
+          Column { PreviewStrip(previews, state.pageCount, state.settings, onOpenPage = vm::openPage) }
         }
         Column(
           Modifier
@@ -291,12 +292,20 @@ private fun SelectionActions(
 }
 
 @Composable
-private fun PreviewStrip(previews: List<Bitmap>, pageCount: Int, s: PdfSettings) {
+private fun PreviewStrip(previews: List<Bitmap>, pageCount: Int, s: PdfSettings, onOpenPage: (Int) -> Unit) {
   val orientation = if (s.landscape) "landscape" else "portrait"
   Text(
     "Preview · $pageCount page${if (pageCount == 1) "" else "s"} · ${s.pageSize.label} $orientation",
-    Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 8.dp),
+    Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp),
     style = MaterialTheme.typography.labelLarge,
+    color = MaterialTheme.colorScheme.onSurfaceVariant,
+    maxLines = 1,
+    overflow = TextOverflow.Ellipsis,
+  )
+  Text(
+    "Tap a page to adjust its images.",
+    Modifier.padding(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 8.dp),
+    style = MaterialTheme.typography.bodySmall,
     color = MaterialTheme.colorScheme.onSurfaceVariant,
     maxLines = 1,
     overflow = TextOverflow.Ellipsis,
@@ -313,7 +322,8 @@ private fun PreviewStrip(previews: List<Bitmap>, pageCount: Int, s: PdfSettings)
           Modifier
             .height(PREVIEW_HEIGHT)
             .aspectRatio(bmp.width.toFloat() / bmp.height)
-            .shadow(3.dp, RoundedCornerShape(2.dp)),
+            .shadow(3.dp, RoundedCornerShape(2.dp))
+            .clickable(role = Role.Button, onClickLabel = "Adjust images on this page") { onOpenPage(index) },
           ContentScale.Fit,
           contentDescription = "Page ${index + 1} preview",
         )
@@ -324,7 +334,7 @@ private fun PreviewStrip(previews: List<Bitmap>, pageCount: Int, s: PdfSettings)
     if (pageCount > previews.size && previews.isNotEmpty()) {
       item {
         Box(Modifier.height(PREVIEW_HEIGHT), contentAlignment = Alignment.Center) {
-          Text("+${pageCount - previews.size} more", color = MaterialTheme.colorScheme.onSurfaceVariant)
+          TextButton(onClick = { onOpenPage(previews.size) }) { Text("+${pageCount - previews.size} more") }
         }
       }
     }

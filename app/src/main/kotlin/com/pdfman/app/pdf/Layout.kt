@@ -74,6 +74,24 @@ enum class Quality(val label: String, val dpi: Int) {
   HIGH("High", 300),
 }
 
+/**
+ * Settings for a single image. [scaleMode] null means "use the layout's setting". [panX] and [panY] pick
+ * which part of a cropped image shows: 0 is the left/top edge, 1 the right/bottom edge, 0.5 the center.
+ */
+data class ImageAdjust(
+  val scaleMode: ScaleMode? = null,
+  val panX: Float = CENTER,
+  val panY: Float = CENTER,
+) {
+  fun modeOr(default: ScaleMode): ScaleMode = scaleMode ?: default
+  val isCentered: Boolean get() = panX == CENTER && panY == CENTER
+
+  companion object {
+    const val CENTER = 0.5f
+    val DEFAULT = ImageAdjust()
+  }
+}
+
 data class PdfSettings(
   val rows: Int = 2,
   val cols: Int = 2,
@@ -129,20 +147,60 @@ object GridMath {
   }
 
   /**
-   * Source rect (in image coordinates) for a centered crop of an image of [srcW]x[srcH] so that it
-   * exactly covers a cell of [cellW]x[cellH] with no letterboxing.
+   * Source rect (in image coordinates) for a crop of an image of [srcW]x[srcH] that exactly covers a cell
+   * of [cellW]x[cellH] with no letterboxing. [panX]/[panY] (0..1) choose where the crop sits; 0.5 centers it.
    */
-  fun cropSource(srcW: Float, srcH: Float, cellW: Float, cellH: Float): Box {
+  fun cropSource(
+    srcW: Float,
+    srcH: Float,
+    cellW: Float,
+    cellH: Float,
+    panX: Float = ImageAdjust.CENTER,
+    panY: Float = ImageAdjust.CENTER,
+  ): Box {
     val cellRatio = cellW / cellH
     val srcRatio = srcW / srcH
     return if (srcRatio > cellRatio) {
       val w = srcH * cellRatio
-      Box((srcW - w) / 2f, 0f, w, srcH)
+      Box((srcW - w) * panX.coerceIn(0f, 1f), 0f, w, srcH)
     } else {
       val h = srcW / cellRatio
-      Box(0f, (srcH - h) / 2f, srcW, h)
+      Box(0f, (srcH - h) * panY.coerceIn(0f, 1f), srcW, h)
     }
   }
+
+  /**
+   * New (panX, panY) after the user drags a cropped image by ([dx], [dy]) page points, so the picture
+   * follows the finger. [rotated] is true when auto-rotate turned the image 90 degrees clockwise in its cell.
+   * Pan along an axis with nothing cropped away is left unchanged.
+   */
+  fun panAfterDrag(
+    srcW: Float,
+    srcH: Float,
+    cell: Box,
+    rotated: Boolean,
+    panX: Float,
+    panY: Float,
+    dx: Float,
+    dy: Float,
+  ): Pair<Float, Float> {
+    // The image is drawn in a frame rotated 90 degrees clockwise, so page (dx, dy) is local (dy, -dx).
+    val lx = if (rotated) dy else dx
+    val ly = if (rotated) -dx else dy
+    val lw = if (rotated) cell.height else cell.width
+    val lh = if (rotated) cell.width else cell.height
+    val crop = cropSource(srcW, srcH, lw, lh)
+    val pxPerPt = crop.width / lw
+    val slackX = srcW - crop.width
+    val slackY = srcH - crop.height
+    val nx = if (slackX > 0.5f) (panX - lx * pxPerPt / slackX).coerceIn(0f, 1f) else panX
+    val ny = if (slackY > 0.5f) (panY - ly * pxPerPt / slackY).coerceIn(0f, 1f) else panY
+    return nx to ny
+  }
+
+  /** Index of the cell containing page point ([x], [y]), or -1. */
+  fun cellAt(cells: List<Box>, x: Float, y: Float): Int =
+    cells.indexOfFirst { x >= it.left && x <= it.right && y >= it.top && y <= it.bottom }
 
   /** True if rotating the image 90° makes its orientation match the cell's. Square shapes never rotate. */
   fun shouldRotate(srcW: Float, srcH: Float, cellW: Float, cellH: Float): Boolean {

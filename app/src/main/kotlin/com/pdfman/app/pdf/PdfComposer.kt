@@ -38,13 +38,23 @@ object PageDrawer {
   }
   private val placeholderPaint = Paint().apply { color = Color.rgb(238, 238, 238) }
 
-  /** Draws one page in PDF point coordinates. [images] are row-major and may be shorter than the cell count. */
-  fun draw(canvas: Canvas, settings: PdfSettings, cells: List<Box>, images: List<Bitmap?>, preview: Boolean) {
+  /**
+   * Draws one page in PDF point coordinates. [images] are row-major and may be shorter than the cell count;
+   * [adjusts] holds each image's own fit/crop and crop position (missing entries use the defaults).
+   */
+  fun draw(
+    canvas: Canvas,
+    settings: PdfSettings,
+    cells: List<Box>,
+    images: List<Bitmap?>,
+    adjusts: List<ImageAdjust>,
+    preview: Boolean,
+  ) {
     canvas.drawColor(Color.WHITE)
     cells.forEachIndexed { i, cell ->
       val bmp = images.getOrNull(i)
       if (bmp != null) {
-        drawInCell(canvas, bmp, cell, settings)
+        drawInCell(canvas, bmp, cell, settings, adjusts.getOrNull(i) ?: ImageAdjust.DEFAULT)
       } else if (preview && i < images.size) {
         canvas.drawRect(cell.toRectF(), placeholderPaint) // still loading
       }
@@ -52,10 +62,14 @@ object PageDrawer {
     }
   }
 
-  private fun drawInCell(canvas: Canvas, bmp: Bitmap, cell: Box, s: PdfSettings) {
+  /** True when auto-rotate turns [bmp] 90 degrees to fit [cell]. */
+  fun isRotated(bmp: Bitmap, cell: Box, s: PdfSettings): Boolean =
+    s.autoRotate && GridMath.shouldRotate(bmp.width.toFloat(), bmp.height.toFloat(), cell.width, cell.height)
+
+  private fun drawInCell(canvas: Canvas, bmp: Bitmap, cell: Box, s: PdfSettings, adjust: ImageAdjust) {
     val bw = bmp.width.toFloat()
     val bh = bmp.height.toFloat()
-    val rotate = s.autoRotate && GridMath.shouldRotate(bw, bh, cell.width, cell.height)
+    val rotate = isRotated(bmp, cell, s)
     // Work in a local box centred on the cell; if rotated, its sides are swapped.
     val lw = if (rotate) cell.height else cell.width
     val lh = if (rotate) cell.width else cell.height
@@ -64,10 +78,10 @@ object PageDrawer {
     canvas.withClip(cell.toRectF()) {
       translate(cell.centerX, cell.centerY)
       if (rotate) rotate(90f)
-      when (s.scaleMode) {
+      when (adjust.modeOr(s.scaleMode)) {
         ScaleMode.FIT -> drawBitmap(bmp, null, GridMath.fit(bw, bh, local).toRectF(), bitmapPaint)
         ScaleMode.CROP -> {
-          val src = GridMath.cropSource(bw, bh, lw, lh)
+          val src = GridMath.cropSource(bw, bh, lw, lh, adjust.panX, adjust.panY)
           drawBitmap(bmp, src.toRect(), local.toRectF(), bitmapPaint)
         }
       }
@@ -75,17 +89,17 @@ object PageDrawer {
   }
 
   /** Renders a small bitmap preview of a page using already-decoded thumbnails. */
-  fun renderPreview(settings: PdfSettings, images: List<Bitmap?>, widthPx: Int): Bitmap {
+  fun renderPreview(settings: PdfSettings, images: List<Bitmap?>, adjusts: List<ImageAdjust>, widthPx: Int): Bitmap {
     val scale = widthPx / settings.pageWidth
     val bmp = createBitmap(widthPx, (settings.pageHeight * scale).toInt())
     val canvas = Canvas(bmp)
     canvas.scale(scale, scale)
-    draw(canvas, settings, settings.cells(), images, preview = true)
+    draw(canvas, settings, settings.cells(), images, adjusts, preview = true)
     return bmp
   }
 
   private fun Box.toRectF() = RectF(left, top, right, bottom)
-  private fun Box.toRect() = Rect(left.toInt(), top.toInt(), right.toInt(), bottom.toInt())
+  private fun Box.toRect() = Rect(left.roundToInt(), top.roundToInt(), right.roundToInt(), bottom.roundToInt())
 }
 
 object PdfComposer {
@@ -93,6 +107,7 @@ object PdfComposer {
   fun write(
     resolver: ContentResolver,
     uris: List<Uri>,
+    adjusts: List<ImageAdjust>,
     settings: PdfSettings,
     out: OutputStream,
     onProgress: (page: Int, total: Int) -> Unit = { _, _ -> },
@@ -100,6 +115,7 @@ object PdfComposer {
     val cells = settings.cells()
     val maxDim = GridMath.decodeSize(cells, settings.quality.dpi)
     val pages = uris.chunked(settings.perPage)
+    val pageAdjusts = adjusts.chunked(settings.perPage)
     val doc = PdfDocument()
     try {
       pages.forEachIndexed { index, chunk ->
@@ -109,7 +125,7 @@ object PdfComposer {
         ).create()
         val page = doc.startPage(info)
         val bitmaps = chunk.map { ImageLoader.load(resolver, it, maxDim) }
-        PageDrawer.draw(page.canvas, settings, cells, bitmaps, preview = false)
+        PageDrawer.draw(page.canvas, settings, cells, bitmaps, pageAdjusts.getOrElse(index) { emptyList() }, preview = false)
         doc.finishPage(page)
         bitmaps.forEach { it?.recycle() }
       }

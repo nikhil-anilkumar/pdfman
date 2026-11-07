@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.core.net.toUri
+import com.pdfman.app.pdf.ImageAdjust
 import com.pdfman.app.pdf.PageSize
 import com.pdfman.app.pdf.PdfSettings
 import com.pdfman.app.pdf.Quality
@@ -24,6 +25,8 @@ data class Creation(
   val pageCount: Int,
   val settings: PdfSettings,
   val imageFiles: List<File>,
+  /** Per-image fit/crop and crop position, parallel to [imageFiles]. */
+  val imageAdjusts: List<ImageAdjust>,
   val thumbFile: File,
 )
 
@@ -55,6 +58,7 @@ class CreationStore(context: Context) {
     pageCount: Int,
     settings: PdfSettings,
     images: List<Uri>,
+    adjusts: List<ImageAdjust>,
     thumbnail: Bitmap?,
   ): Creation {
     val dir = dirFor(id).apply { mkdirs() }
@@ -74,8 +78,9 @@ class CreationStore(context: Context) {
       .put("pageCount", pageCount)
       .put("settings", settings.toJson())
       .put("images", JSONArray(files.map { it.name }))
+      .put("adjusts", JSONArray(adjusts.map { it.toJson() }))
     File(dir, JSON).writeText(json.toString())
-    return Creation(id, name, pdfUri, createdAt, now, pageCount, settings, files, thumbFile)
+    return Creation(id, name, pdfUri, createdAt, now, pageCount, settings, files, adjusts, thumbFile)
   }
 
   fun delete(id: String) {
@@ -85,6 +90,9 @@ class CreationStore(context: Context) {
   private fun read(dir: File): Creation {
     val json = JSONObject(File(dir, JSON).readText())
     val images = json.getJSONArray("images").let { arr -> (0 until arr.length()).map { File(dir, arr.getString(it)) } }
+    // Creations saved before per-image settings existed have no "adjusts"; they use the defaults.
+    val adjustsJson = json.optJSONArray("adjusts")
+    val adjusts = images.indices.map { i -> adjustsJson?.optJSONObject(i)?.let(::adjustFromJson) ?: ImageAdjust.DEFAULT }
     return Creation(
       id = dir.name,
       name = json.getString("name"),
@@ -94,6 +102,7 @@ class CreationStore(context: Context) {
       pageCount = json.getInt("pageCount"),
       settings = settingsFromJson(json.getJSONObject("settings")),
       imageFiles = images,
+      imageAdjusts = adjusts,
       thumbFile = File(dir, THUMB),
     )
   }
@@ -127,6 +136,17 @@ class CreationStore(context: Context) {
       .put("autoRotate", autoRotate)
       .put("borders", borders)
       .put("quality", quality.name)
+
+    fun ImageAdjust.toJson(): JSONObject = JSONObject()
+      .put("scaleMode", scaleMode?.name ?: JSONObject.NULL)
+      .put("panX", panX.toDouble())
+      .put("panY", panY.toDouble())
+
+    fun adjustFromJson(j: JSONObject): ImageAdjust = ImageAdjust(
+      scaleMode = if (j.isNull("scaleMode")) null else runCatching { ScaleMode.valueOf(j.getString("scaleMode")) }.getOrNull(),
+      panX = j.optDouble("panX", ImageAdjust.CENTER.toDouble()).toFloat().coerceIn(0f, 1f),
+      panY = j.optDouble("panY", ImageAdjust.CENTER.toDouble()).toFloat().coerceIn(0f, 1f),
+    )
 
     fun settingsFromJson(j: JSONObject): PdfSettings {
       val d = PdfSettings()
