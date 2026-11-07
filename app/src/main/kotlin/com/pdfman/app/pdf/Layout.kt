@@ -68,10 +68,10 @@ enum class PageSize(val label: String, val group: PaperGroup, val shortSide: Flo
 /** Converts PDF points to millimetres for display. */
 fun Float.ptToMm(): Float = this / MM
 
-enum class Quality(val label: String, val dpi: Int) {
-  SMALL("Small file", 100),
-  BALANCED("Balanced", 150),
-  HIGH("High", 300),
+enum class Quality(val label: String, val dpi: Int, val jpegQuality: Int) {
+  SMALL("Small file", 100, 70),
+  BALANCED("Balanced", 150, 80),
+  HIGH("High", 300, 90),
 }
 
 /**
@@ -210,6 +210,13 @@ object GridMath {
     val cellPortrait = cellH > cellW * 1.05f
     return (srcLandscape && cellPortrait) || (srcPortrait && cellLandscape)
   }
+
+  /**
+   * Source pixels per point when an image of [srcW]x[srcH] is drawn into a [cellW]x[cellH] box,
+   * whole ([crop] false) or filling it ([crop] true).
+   */
+  fun sourceDensity(srcW: Float, srcH: Float, cellW: Float, cellH: Float, crop: Boolean): Float =
+    if (crop) min(srcW / cellW, srcH / cellH) else max(srcW / cellW, srcH / cellH)
 
   /** Pixel size to decode images at so they look sharp at [dpi] inside the given cells. */
   fun decodeSize(cells: List<Box>, dpi: Int): Int {

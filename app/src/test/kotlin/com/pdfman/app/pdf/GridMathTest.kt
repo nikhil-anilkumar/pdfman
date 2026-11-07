@@ -121,4 +121,10 @@ class GridMathTest {
     assertTrue(ImageAdjust().isCentered)
     assertFalse(ImageAdjust(panX = 0f).isCentered)
   }
+
+  @Test fun sourceDensityMatchesHowTheImageIsScaled() {
+    // 400x200 px into a 100x100 pt box: fit scales by 0.25 (4 px/pt), crop by 0.5 (2 px/pt).
+    assertEquals(4f, GridMath.sourceDensity(400f, 200f, 100f, 100f, crop = false), eps)
+    assertEquals(2f, GridMath.sourceDensity(400f, 200f, 100f, 100f, crop = true), eps)
+  }
 }

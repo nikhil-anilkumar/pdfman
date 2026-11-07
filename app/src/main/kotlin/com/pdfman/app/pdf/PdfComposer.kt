@@ -8,12 +8,13 @@ import android.graphics.ImageDecoder
 import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.RectF
-import android.graphics.pdf.PdfDocument
 import android.net.Uri
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.withClip
+import java.io.ByteArrayOutputStream
 import java.io.OutputStream
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.roundToInt
 
 object ImageLoader {
@@ -66,7 +67,7 @@ object PageDrawer {
   fun isRotated(bmp: Bitmap, cell: Box, s: PdfSettings): Boolean =
     s.autoRotate && GridMath.shouldRotate(bmp.width.toFloat(), bmp.height.toFloat(), cell.width, cell.height)
 
-  private fun drawInCell(canvas: Canvas, bmp: Bitmap, cell: Box, s: PdfSettings, adjust: ImageAdjust) {
+  fun drawInCell(canvas: Canvas, bmp: Bitmap, cell: Box, s: PdfSettings, adjust: ImageAdjust) {
     val bw = bmp.width.toFloat()
     val bh = bmp.height.toFloat()
     val rotate = isRotated(bmp, cell, s)
@@ -103,7 +104,13 @@ object PageDrawer {
 }
 
 object PdfComposer {
-  /** Writes the PDF, decoding one page worth of full-quality images at a time to bound memory use. */
+  private const val BORDER_GRAY = 160f / 255f
+  private const val BORDER_WIDTH = 0.75f
+
+  /**
+   * Writes the PDF, decoding one page worth of images at a time to bound memory use. Each image is rendered
+   * at the cell's size and the quality's dpi (never above the image's own resolution) and stored as JPEG.
+   */
   fun write(
     resolver: ContentResolver,
     uris: List<Uri>,
@@ -116,22 +123,47 @@ object PdfComposer {
     val maxDim = GridMath.decodeSize(cells, settings.quality.dpi)
     val pages = uris.chunked(settings.perPage)
     val pageAdjusts = adjusts.chunked(settings.perPage)
-    val doc = PdfDocument()
-    try {
-      pages.forEachIndexed { index, chunk ->
-        onProgress(index + 1, pages.size)
-        val info = PdfDocument.PageInfo.Builder(
-          settings.pageWidth.roundToInt(), settings.pageHeight.roundToInt(), index + 1,
-        ).create()
-        val page = doc.startPage(info)
-        val bitmaps = chunk.map { ImageLoader.load(resolver, it, maxDim) }
-        PageDrawer.draw(page.canvas, settings, cells, bitmaps, pageAdjusts.getOrElse(index) { emptyList() }, preview = false)
-        doc.finishPage(page)
-        bitmaps.forEach { it?.recycle() }
+    val pdf = PdfWriter(out)
+    val jpeg = ByteArrayOutputStream()
+    pages.forEachIndexed { index, chunk ->
+      onProgress(index + 1, pages.size)
+      pdf.beginPage(settings.pageWidth, settings.pageHeight)
+      val adjustsHere = pageAdjusts.getOrElse(index) { emptyList() }
+      chunk.forEachIndexed { i, uri ->
+        val cell = cells[i]
+        val src = ImageLoader.load(resolver, uri, maxDim)
+        if (src != null) {
+          val rendered = renderCell(src, cell, settings, adjustsHere.getOrNull(i) ?: ImageAdjust.DEFAULT)
+          src.recycle()
+          jpeg.reset()
+          rendered.compress(Bitmap.CompressFormat.JPEG, settings.quality.jpegQuality, jpeg)
+          pdf.drawJpeg(jpeg.toByteArray(), rendered.width, rendered.height, cell)
+          rendered.recycle()
+        }
+        if (settings.borders) pdf.strokeRect(cell, BORDER_GRAY, BORDER_WIDTH)
       }
-      doc.writeTo(out)
-    } finally {
-      doc.close()
+      pdf.endPage()
     }
+    pdf.finish()
+  }
+
+  /** Draws [src] as it appears in [cell] into a white bitmap covering the cell. */
+  private fun renderCell(src: Bitmap, cell: Box, settings: PdfSettings, adjust: ImageAdjust): Bitmap {
+    val rotated = PageDrawer.isRotated(src, cell, settings)
+    val lw = if (rotated) cell.height else cell.width
+    val lh = if (rotated) cell.width else cell.height
+    val crop = adjust.modeOr(settings.scaleMode) == ScaleMode.CROP
+    val density = GridMath.sourceDensity(src.width.toFloat(), src.height.toFloat(), lw, lh, crop)
+    val pxPerPt = min(settings.quality.dpi / 72f, density)
+    val w = (cell.width * pxPerPt).roundToInt().coerceAtLeast(1)
+    val h = (cell.height * pxPerPt).roundToInt().coerceAtLeast(1)
+    val bmp = createBitmap(w, h)
+    Canvas(bmp).apply {
+      drawColor(Color.WHITE)
+      scale(w / cell.width, h / cell.height)
+      translate(-cell.left, -cell.top)
+      PageDrawer.drawInCell(this, src, cell, settings, adjust)
+    }
+    return bmp
   }
 }
