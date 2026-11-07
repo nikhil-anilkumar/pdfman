@@ -1,0 +1,2 @@
+* Much smaller PDFs: images are stored as JPEG at the chosen quality
+* Each image can use fit or crop on its own, and cropped images can be moved within their cell

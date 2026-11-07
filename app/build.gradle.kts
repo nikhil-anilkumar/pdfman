@@ -18,8 +18,8 @@ android {
     applicationId = "com.pdfman.app"
     minSdk = 28
     targetSdk = 37
-    versionCode = 1
-    versionName = "1.0.0"
+    versionCode = 2
+    versionName = "1.0.1"
 
     // Shown on the About screen so the credits always match what ships.
     buildConfigField("String", "COMPOSE_BOM_VERSION", "\"${libs.versions.androidxComposeBom.get()}\"")
